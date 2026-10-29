@@ -1,0 +1,21 @@
+# 1事実 = 1ファイル。ファイル名は id と一致させる（<id>.yaml）。
+# これは _TEMPLATE.yaml なのでゲートの監査対象外（_ 始まりは無視される）。
+# コピーして使う:  cp facts/_TEMPLATE.yaml facts/<your_id>.yaml
+
+id: CHANGE_ME              # 一意。ファイル名と一致。snake_case
+subject: ""               # 誰／何についての事実か（NPC名・地名・組織名）
+tags: []                  # 任意。検索・季節注入フック（例: [harbor, rival]）
+
+canon: ""                 # 真の世界状態。GM専用。地の文で語らない
+
+revealed:
+  status: hidden          # hidden | partial | full （一方向のみ。後退不可）
+  to_player: ""           # playerに届いている表現。hidden なら空でよい
+  channel: ""             # 開示チャネル（NPC/文書/観察）。status>hidden で必須
+  at: ""                  # 開示時刻（例: autumn.d14）。status>hidden で必須
+
+belief:
+  player_thinks: ""       # playerが真だと思っている内容。未接触なら空
+  diverges: false         # canon と player_thinks が食い違うか
+  cause: null             # 乖離の理由。diverges=true なら必須（例: "disinfo(二重間諜)"）
+                          # diverges=true で cause=null はゲートで停止

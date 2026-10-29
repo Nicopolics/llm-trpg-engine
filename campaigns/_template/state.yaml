@@ -1,0 +1,36 @@
+# state.yaml — 物質状態の唯一の正（single source of truth）
+# 仕様: engine/state.schema.md / 操作: engine/state_ops.md
+#
+# これは雛形（ゼロ状態）。セッションゼロで GM が初期状態を書き込む。
+# 空のまま遊び始めない（初期所持金などは INIT で history に記録する）。
+#
+# 設計制約: 1 変更＝1 書き込み。
+#   - 金は history に 1 行 追記（balances は導出値。ゲートが Σhistory で再計算）
+#   - 位置/HP/時刻/段階は現在値フィールドを 1 つ 上書き
+#   - 同じ事実を facts/ と state.yaml の両方に書かない（排他）
+
+meta:
+  campaign: _template
+  save_seq: 0
+  clock: ""                 # 例: autumn.d01.dawn。単調増加
+  # weather: ""             # 【オプション】機械的に扱うときだけ
+
+prices: []                  # 使う項目だけ載せる（変更時のみ更新）
+  # - { id: ferry_fare, label: "渡し船 片道", amount: 1, unit: copper }
+
+player:
+  position: ""
+  hp: { current: 0, max: 0 }
+  purse:
+    history: []             # ★書き込みはここだけ（append-only）。初期額は INIT で
+      # - { at: "", op: INIT, delta: { copper: 0 }, reason: "初期所持金", counterparty: null }
+    balances: {}            # 導出値。history と一致していないとゲートが停止
+  inventory: []
+    # - { id: "", label: "", qty: 1 }
+  # equipment: []           # 【オプション】{ slot, id, label }
+  # abilities: []           # 【オプション】{ id, value } 機械的な値のみ
+
+quests: []
+  # - { id: "", stage: 0, status: active }
+
+# npcs: []                  # 【オプション】{ id, disposition, alive, location }

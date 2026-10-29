@@ -1,0 +1,24 @@
+# === サンプル事実（削除可） ===
+# 三層と偽情報がどう同居するかを示すための参照例。
+# 自分のキャンペーンを始めるときはこのファイルを消してよい。
+#
+# 状況: 水先案内人が敵商会の内通者（canon）だが、二重間諜が「中立の技術者」
+#       という偽情報を流し（disinfo）、player はまだ真相を掴んでいない。
+#       尋問で断片だけ漏れた（partial 開示）状態。
+
+id: example_harbor_pilot
+subject: 水先案内人
+tags: [harbor, sample]
+
+canon: "水先案内人は敵対商会に雇われた内通者。港の防備情報を流している"
+
+revealed:
+  status: partial
+  to_player: "水先案内人の素性には不審な点がある、との証言を得た"
+  channel: "捕虜の尋問"
+  at: sample.d14
+
+belief:
+  player_thinks: "水先案内人は中立の技術者で、敵とは無関係"
+  diverges: true
+  cause: "disinfo(二重間諜, sample.d11)"
