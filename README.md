@@ -224,6 +224,8 @@ REVEAL   pilot_loyalty  full     via=証拠露見(積荷台帳)                 
 
 ## リプレイ例
 
+環境：Claude Opus 5.5 high
+
 （llm-trpg-engineのファイルを添付）
 
 ```
