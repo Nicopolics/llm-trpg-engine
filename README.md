@@ -408,7 +408,7 @@ llm-trpg-engine を読み込んで、セッションの準備をします。
 ```
 llm-trpg-engine/
 ├── README.md / DESIGN.md   ← このファイル / 設計思想
-├── START_HERE.md           ← LLMにGMの契約と手順を与える文書（起動プロンプトを含む）
+├── START_HERE.md           ← AIにGMの契約と手順を与える文書（起動プロンプトを含む）
 ├── VERSION / CHANGELOG.md  ← エンジンのバージョンと変更履歴
 ├── LICENSE / LICENSES/     ← MIT / CC BY-SA 4.0
 ├── requirements.txt        ← Python版ゲートの依存（PyYAML）
@@ -605,11 +605,11 @@ REVEAL   pilot_loyalty  full     via=証拠露見(積荷台帳)                 
 
 | | コード無し版 | Python版 |
 |---|---|---|
-| 実行するもの | LLM（手順: `engine/AUDIT_PROTOCOL.md`） | `tools/export_gate.py` |
+| 実行するもの | AI（手順: `engine/AUDIT_PROTOCOL.md`） | `tools/export_gate.py` |
 | 確認 | 人間が表を目視する | スクリプトが判定する |
-| 制限 | LLMが検査するため、見落としがありうる | Python と PyYAML が必要 |
+| 制限 | AIが検査するため、見落としがありうる | Python と PyYAML が必要 |
 
-未確認: Python 版ゲートを、各LLMのサービスで実行できるか。
+未確認: Python 版ゲートを、各AIのサービスで実行できるか。
 
 ### 設計の背景
 
