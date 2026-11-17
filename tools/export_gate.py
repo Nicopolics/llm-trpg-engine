@@ -31,6 +31,7 @@ export_gate.py — 三層開示エンジンの保存前ゲート
   P. 新設定             — TURNLOG の新設定と CHANGELOG の CANON+ 行が対応し、file が実在するか
   Q. 好感照合           — NPC の regard が最後の ROLL(regard/hear) の after と一致するか
   R. 噂                 — 目撃された中立以外の行為に噂が発生し、reach が spread の結果と一致するか
+  S. 生ログ対応         — TRANSCRIPT.md があるとき、その move が TURNLOG と一致し、入力と本文の節があるか
 
 合格時: saves/last_revealed.json を更新し、CHANGELOG.md に [gate passed] を追記。
 不合格時: 非ゼロ終了。スナップショットは更新しない。

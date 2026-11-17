@@ -420,6 +420,7 @@ llm-trpg-engine/
 │   ├── season_inject.md    ← 季節注入
 │   ├── event_draw.md       ← イベント抽選
 │   ├── turnlog.spec.md     ← 手番ログ（TURNLOG.md）の仕様
+│   ├── transcript.spec.md  ← 生ログ（TRANSCRIPT.md）の仕様
 │   ├── reaction.md         ← 反応の機構（態度・噂・成否・新設定）
 │   ├── fact.schema.md      ← 事実（facts/*.yaml）のスキーマ
 │   ├── state.schema.md     ← 台帳（state.yaml）のスキーマ
@@ -442,6 +443,7 @@ llm-trpg-engine/
     │   ├── CHANGELOG.md    ← 操作ログ
     │   ├── JOURNAL.md      ← 進行メモ
     │   ├── TURNLOG.md      ← 手番ログ
+    │   ├── TRANSCRIPT.md   ← 生ログ（入力と本文の原文）
     │   └── README.md
     └── <yours>/            ← あなたのキャンペーン（雛形のコピー）
 ```
@@ -487,6 +489,7 @@ llm-trpg-engine/
 | `CHANGELOG.md` | 開示操作・状態操作・ゲート通過の追記ログ | GM、ゲート |
 | `JOURNAL.md` | 現在地（上書き）と経緯（追記） | GM |
 | `TURNLOG.md` | 手番ごとの処理記録（追記）。人物・事実・事件を id で参照し、検索できる | GM |
+| `TRANSCRIPT.md` | 手番ごとの入力と本文の原文（追記）。TURNLOG と同じ move 番号で対応する | GM |
 
 #### 事実（`facts/*.yaml`）
 
@@ -668,7 +671,7 @@ cp -r campaigns/_template campaigns/myworld
 python3 tools/export_gate.py myworld            # 監査して、合格なら saves を更新し CHANGELOG.md に追記
 python3 tools/export_gate.py myworld --dry-run  # 監査のみ。書き込まない
 python3 tools/draw.py myworld                   # イベント抽選。d20を振り CHANGELOG.md に DRAW 行を追記
-python3 tools/turnlog.py myworld --npc berta     # 手番ログの検索（--fact / --event / --from / --to / --text）
+python3 tools/turnlog.py myworld --npc berta     # 手番ログの検索（--fact / --event / --from / --to / --text、--raw で原文も表示）
 python3 tools/roll.py myworld regard berta 茶化す # 態度の出目（check / spread / meet もある）
 ```
 
