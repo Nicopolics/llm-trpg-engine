@@ -80,6 +80,11 @@ meta:
   campaign: <string>
   save_seq: <int>
   clock: <string>           # 現在時刻。例 autumn.d14.morning。単調増加（点値）
+  move: <int>               # GMの手番。開幕前は 0。→ event_draw.md / turnlog.spec.md
+  tension: <int>            # イベント抽選の緊張度（0〜5）
+  last_major_move: <int|null>  # 直近の大イベントの手番
+  # draw_table: {...}       # 【オプション】抽選表の上書き
+  # rng_cursor: <int>       # 【オプション】コード無し版で乱数列をどこまで使ったか
   # weather: <string>       # 【オプション】天候を機械的に扱う必要があるときだけ
 
 prices:                     # 参照データ。使う項目だけ載せる。変更時のみ更新

@@ -141,3 +141,50 @@
 - 先行3エントリ（見渡し手化・一手目も抽選・リポジトリ反映時の補正）は e9de5af でまとめてコミット済みだが、trailer が無い。
   本エントリのコミットに、それら3件の trailer を後付けで載せて対応を記録する。
 - trailer の照合は見出しの完全一致。見出しを後から書き換えると未記録扱いになる（append-only の規則で防ぐ）。
+
+## 2026-11-18 — 手番ログ TURNLOG を新設し、検索とゲート検査を追加
+
+### 動機（検証で観察したこと）
+- ハーゼルト卓で、くすぐる・踊るといった突飛な行動に NPC が反応した。だが、その態度の変化（ベルタの不信）は台帳にも
+  どのログにも残らなかった。JOURNAL はセーブ時だけ、CHANGELOG は型付き操作だけなので、
+  「この手で誰がどう反応したか」「誰が見ていたか」が GM の記憶頼みになっていた。
+- 後から検索でき、情報の流れ（誰が何を見聞きしたか）と一貫性を機械的に保てる形が要る。
+
+### 変更
+- `engine/turnlog.spec.md` を新設した。
+  - 1手（GM の応答 1 回）＝1エントリ。見出しは `### move <n> | <clock> | <場所>`。
+  - 8キー（入力・抽選・事件・起きたこと・反応・目撃・台帳・開示）を毎回書く。
+  - 人物・事実・事件は `npc:<id>`・`fact:<id>`・`ev:<id>` で参照する。Canon は書かない。
+  - JOURNAL・CHANGELOG との棲み分けを表にした。コード無し版はセーブ時にまとめて出力する。
+- `tools/turnlog.py` を新設した。
+  - 解析器と検索 CLI。`--npc` `--fact` `--event` `--from` `--to` `--text` を AND で絞り込む。
+  - `check()` でゲート検査 L/M/N/O を提供する。
+- `tools/export_gate.py` に TURNLOG.md の検査を追加した（ファイルがあるときのみ）。
+  - L 手番連続（1 から連続、最後が meta.move。meta.move>0 でエントリ 0 件も FAIL）
+  - M 抽選照合（DRAW/EVENT 行との一致）
+  - N 参照実在（npc/fact/ev の id）
+  - O キー欠落
+  - 改ざんしたログで、M/N/O が検出されることを確認済み。
+- `engine/GM_CONTRACT.md` に第9条（手番ごとに TURNLOG を書く。NPC 再登場前に過去の手を確かめる）を追加した。
+- `START_HERE.md` の変更:
+  - 起動プロンプトに「手番ログ（TURNLOG）」節を追加した。
+  - セーブ STEP5 で、前回以降の TURNLOG を出力するようにした。
+- `engine/state.schema.md` の meta に `move` / `tension` / `last_major_move` / `draw_table` / `rng_cursor` を追記した。
+- テンプレートの変更:
+  - `campaigns/_template/TURNLOG.md` を新設した。
+  - `_template/state.yaml` に meta.move=0 等の初期値を追加した。
+  - `_template/world/04_events.md` を事件プールの書式（小／大の表、id は ev_ 始まり）にした。
+  - これで前エントリまでの未決のうち、state.schema・_template 関連は解消。
+- `README.md` を更新した（ファイル一覧、1セッションの流れに「毎手」の段、ファイル表、Python 版の使い方）。
+
+### 影響を受けるキャンペーン側の処置
+- `campaigns/haselt`（ローカル卓）について。
+  - 試行版の TURNLOG.md を新書式に書き直した（move 1〜3）。move 1 は抽選導入前のため「抽選: なし（理由）」とした。
+  - ベルタの態度変化を state.npcs と CHANGELOG（STATE 行）に記録した。
+
+### 未決・次の課題
+- NPC の態度の変化と、目撃からの噂の伝播は、まだ GM の裁量で決まっている。TURNLOG は「記録」を機械化しただけで、
+  「決定」は機械化していない。裁量ではなく仕組みで決める方法を次に設計する。
+- 行動の成否判定の規則が無い。
+- `AUDIT_PROTOCOL.md`（コード無し監査）に L/M/N/O 相当のチェックをまだ足していない。
+- VERSION は据え置きのまま。
