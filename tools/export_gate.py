@@ -23,6 +23,12 @@ export_gate.py — 三層開示エンジンの保存前ゲート
                           （＝記憶からの金額補完の検出。1銅貨→6銅貨事故の番人）
   K. id 一意            — prices/inventory/quests/npcs の id 重複
 
+検査項目（手番ログ TURNLOG.md。存在するときのみ → engine/turnlog.spec.md）:
+  L. 手番連続           — move が 1 から連続し、最後が meta.move と一致するか
+  M. 抽選照合           — 抽選した手に CHANGELOG の DRAW/EVENT 行が対応するか
+  N. 参照実在           — npc:/fact:/ev: の id が state/facts/事件プールに実在するか
+  O. キー欠落           — 8 つのキーがすべて書かれているか
+
 合格時: saves/last_revealed.json を更新し、CHANGELOG.md に [gate passed] を追記。
 不合格時: 非ゼロ終了。スナップショットは更新しない。
 
@@ -40,6 +46,9 @@ import os
 import json
 import glob
 import datetime
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import turnlog  # noqa: E402  手番ログの解析（tools/turnlog.py）
 
 try:
     import yaml
@@ -421,8 +430,14 @@ def main():
         violations += check_state_ids(state)
         violations += check_state_ratchet(state, prev)
 
+    # --- 手番ログ（TURNLOG.md）の監査。無ければ省略 ---
+    for rule, msg in turnlog.check(CAMPAIGN_DIR, state, facts.keys()):
+        violations.append(Violation("TURNLOG.md", rule, msg))
+
     state_line = "state.yaml なし（開示層のみ）" if state is None else "state.yaml あり"
-    print(f"監査対象: {len(facts)} facts / {state_line}\n")
+    has_tl = os.path.exists(os.path.join(CAMPAIGN_DIR, "TURNLOG.md"))
+    print(f"監査対象: {len(facts)} facts / {state_line}"
+          f"{' / TURNLOG.md あり' if has_tl else ''}\n")
 
     if violations:
         print(RED(f"✗ ゲート停止: {len(violations)} 件の違反\n"))

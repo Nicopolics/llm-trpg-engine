@@ -419,6 +419,7 @@ llm-trpg-engine/
 │   ├── operations.md       ← 開示の操作（REVEAL / DISINFO / CORRECT）
 │   ├── season_inject.md    ← 季節注入
 │   ├── event_draw.md       ← イベント抽選
+│   ├── turnlog.spec.md     ← 手番ログ（TURNLOG.md）の仕様
 │   ├── fact.schema.md      ← 事実（facts/*.yaml）のスキーマ
 │   ├── state.schema.md     ← 台帳（state.yaml）のスキーマ
 │   ├── state_ops.md        ← 台帳の操作（SPEND / MOVE など）
@@ -427,7 +428,9 @@ llm-trpg-engine/
 │   └── AUDIT_PROTOCOL.md   ← コード無しの監査手順
 ├── tools/
 │   ├── export_gate.py      ← Python版ゲート
-│   └── draw.py             ← イベント抽選（d20を振りCHANGELOGに記録）
+│   ├── draw.py             ← イベント抽選（d20を振りCHANGELOGに記録）
+│   ├── turnlog.py          ← 手番ログの検索（npc/fact/事件/手番/文字列）
+│   └── worklog_sync.py     ← WORKLOG と git 履歴の突き合わせ
 └── campaigns/
     ├── _template/          ← 空のキャンペーン雛形
     │   ├── world/          ← 00 目次、01 地理、02 人物、03 勢力、04 事件、05 経済、06 軍事、07 制度、08 時系列、09 PC
@@ -436,6 +439,7 @@ llm-trpg-engine/
     │   ├── saves/          ← スナップショットの置き場
     │   ├── CHANGELOG.md    ← 操作ログ
     │   ├── JOURNAL.md      ← 進行メモ
+    │   ├── TURNLOG.md      ← 手番ログ
     │   └── README.md
     └── <yours>/            ← あなたのキャンペーン（雛形のコピー）
 ```
@@ -450,6 +454,7 @@ llm-trpg-engine/
 | 開始（セッションゼロ） | 世界の骨格と、プレイヤーに伏せた事実を最低1つ作る。初期状態の台帳を書く。最初の発話は到着の場面で、見回す余裕を残す（見渡し手。事件は抽選で小まで） | 書く: `world/*.md`、`facts/*.yaml`、`state.yaml` |
 | プレイ中（情報） | 3つの操作で情報を出し、`CHANGELOG.md` に1行記録し、対応する事実の `revealed` / `belief` を更新する | 読み書き: `facts/*.yaml`、`CHANGELOG.md` |
 | プレイ中（状態） | 参照→差分→更新→本文の順で処理し、`CHANGELOG.md` に1行記録する | 読み書き: `state.yaml`、`CHANGELOG.md` |
+| プレイ中（毎手） | 応答ごとにイベントを抽選し、手番ログに入力・抽選・反応・目撃などを1エントリ追記する | 書く: `TURNLOG.md`、`CHANGELOG.md`（DRAW/EVENT） |
 | セーブ | 監査を行う。合格なら、スナップショットを出し、`JOURNAL.md` の現在地を更新して経緯に追記する。FAIL なら、保存しない | 読む: `facts/*.yaml`、`state.yaml`、前回のスナップショット。書く: `saves/`（Python版）、`JOURNAL.md`、`CHANGELOG.md`（ゲート通過の印） |
 | 次回 | 保管したファイルを受け取り、`JOURNAL.md` の現在地から再開する | 読む: 前回のスナップショット、`state.yaml`、`JOURNAL.md`（現在地と直近の経緯） |
 
@@ -479,6 +484,7 @@ llm-trpg-engine/
 | `saves/` | セーブ時のスナップショット | ゲート（Python版） |
 | `CHANGELOG.md` | 開示操作・状態操作・ゲート通過の追記ログ | GM、ゲート |
 | `JOURNAL.md` | 現在地（上書き）と経緯（追記） | GM |
+| `TURNLOG.md` | 手番ごとの処理記録（追記）。人物・事実・事件を id で参照し、検索できる | GM |
 
 #### 事実（`facts/*.yaml`）
 
@@ -660,6 +666,7 @@ cp -r campaigns/_template campaigns/myworld
 python3 tools/export_gate.py myworld            # 監査して、合格なら saves を更新し CHANGELOG.md に追記
 python3 tools/export_gate.py myworld --dry-run  # 監査のみ。書き込まない
 python3 tools/draw.py myworld                   # イベント抽選。d20を振り CHANGELOG.md に DRAW 行を追記
+python3 tools/turnlog.py myworld --npc berta     # 手番ログの検索（--fact / --event / --from / --to / --text）
 ```
 
 `campaigns/` に実キャンペーンが1つだけなら、名前は省略できる。

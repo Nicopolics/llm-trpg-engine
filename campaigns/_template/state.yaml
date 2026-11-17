@@ -13,6 +13,9 @@ meta:
   campaign: _template
   save_seq: 0
   clock: ""                 # 例: autumn.d01.dawn。単調増加
+  move: 0                   # GMの手番（engine/event_draw.md）。開幕前は 0、抽選ごとに +1
+  tension: 0                # 緊張度。平穏な手ごとに +1（上限5）、事件で 0
+  last_major_move: null     # 直近の大イベントの手番
   # weather: ""             # 【オプション】機械的に扱うときだけ
 
 prices: []                  # 使う項目だけ載せる（変更時のみ更新）
