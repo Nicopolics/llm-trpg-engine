@@ -410,6 +410,7 @@ llm-trpg-engine/
 ├── README.md / DESIGN.md   ← このファイル / 設計思想
 ├── START_HERE.md           ← AIにGMの契約と手順を与える文書（起動プロンプトを含む）
 ├── VERSION / CHANGELOG.md  ← エンジンのバージョンと変更履歴
+├── WORKLOG.md              ← エンジン作業ログ（変更の動機・内容・未決）
 ├── LICENSE / LICENSES/     ← MIT / CC BY-SA 4.0
 ├── requirements.txt        ← Python版ゲートの依存（PyYAML）
 ├── engine/                 ← 全キャンペーン共通。固有名詞・世界設定を含まない
@@ -417,6 +418,7 @@ llm-trpg-engine/
 │   ├── OPENING_PROTOCOL.md ← 開始の手順（セッションゼロ・一手目）
 │   ├── operations.md       ← 開示の操作（REVEAL / DISINFO / CORRECT）
 │   ├── season_inject.md    ← 季節注入
+│   ├── event_draw.md       ← イベント抽選
 │   ├── fact.schema.md      ← 事実（facts/*.yaml）のスキーマ
 │   ├── state.schema.md     ← 台帳（state.yaml）のスキーマ
 │   ├── state_ops.md        ← 台帳の操作（SPEND / MOVE など）
@@ -424,7 +426,8 @@ llm-trpg-engine/
 │   ├── changelog.spec.md   ← CHANGELOG.md の書式
 │   └── AUDIT_PROTOCOL.md   ← コード無しの監査手順
 ├── tools/
-│   └── export_gate.py      ← Python版ゲート
+│   ├── export_gate.py      ← Python版ゲート
+│   └── draw.py             ← イベント抽選（d20を振りCHANGELOGに記録）
 └── campaigns/
     ├── _template/          ← 空のキャンペーン雛形
     │   ├── world/          ← 00 目次、01 地理、02 人物、03 勢力、04 事件、05 経済、06 軍事、07 制度、08 時系列、09 PC
@@ -444,7 +447,7 @@ llm-trpg-engine/
 
 | 段階 | GMがすること | 読み書きするファイル |
 |------|-------------|--------------------|
-| 開始（セッションゼロ） | 世界の骨格と、プレイヤーに伏せた事実を最低1つ作る。初期状態の台帳を書く。最初の発話は、すでに動いているイベントの途中から始める | 書く: `world/*.md`、`facts/*.yaml`、`state.yaml` |
+| 開始（セッションゼロ） | 世界の骨格と、プレイヤーに伏せた事実を最低1つ作る。初期状態の台帳を書く。最初の発話は到着の場面で、見回す余裕を残す（見渡し手。事件は抽選で小まで） | 書く: `world/*.md`、`facts/*.yaml`、`state.yaml` |
 | プレイ中（情報） | 3つの操作で情報を出し、`CHANGELOG.md` に1行記録し、対応する事実の `revealed` / `belief` を更新する | 読み書き: `facts/*.yaml`、`CHANGELOG.md` |
 | プレイ中（状態） | 参照→差分→更新→本文の順で処理し、`CHANGELOG.md` に1行記録する | 読み書き: `state.yaml`、`CHANGELOG.md` |
 | セーブ | 監査を行う。合格なら、スナップショットを出し、`JOURNAL.md` の現在地を更新して経緯に追記する。FAIL なら、保存しない | 読む: `facts/*.yaml`、`state.yaml`、前回のスナップショット。書く: `saves/`（Python版）、`JOURNAL.md`、`CHANGELOG.md`（ゲート通過の印） |
@@ -462,7 +465,7 @@ llm-trpg-engine/
 | セーブ前に監査を行い、1件でも FAIL なら保存しない | 第6条、`engine/AUDIT_PROTOCOL.md` |
 | 所持金・持ち物・位置・時刻・進行は `state.yaml` を唯一の正とする。金額は価格表から算出する | 第7条 |
 | セーブ時に `JOURNAL.md` の現在地を更新し、経緯に追記する。書くのはプレイヤーに表出したことだけ | 第8条 |
-| キャラクター作成を求めない。すでに動いているイベントの途中から始める | `engine/OPENING_PROTOCOL.md` 条件3・4 |
+| キャラクター作成を求めない。一手目は見渡し手。事件は一手目から抽選で起こす（一手目は小まで） | `engine/OPENING_PROTOCOL.md` 条件3・4、`engine/event_draw.md` |
 
 ### キャンペーンのデータ
 
@@ -549,10 +552,12 @@ belief:                        # プレイヤーが信じていること
 ### 開始と進行
 
 - 開始時に、GMが世界の骨格と、プレイヤーに伏せた事実（`status: hidden`）を最低1つ作り、初期状態の台帳を書く（`OPENING_PROTOCOL.md` 条件1）。
-- 最初のGM発話は、状況を出し、人物を決めず、チャネルを伴い、伏せた事実を解決しない形にする（条件4）。例:
+- 最初のGM発話は到着の場面にする。見回せる場所・人・物を複数置き、急がせない。事件の有無は抽選で決め、一手目は小イベントまで（条件4）。例:
 
-  > 夜明け前、城門の衛兵が叩き起こしに来る——使者が一人、門前で倒れた。
-  > 意識はない。手には封蝋の押された書状。宛名は"この地の主"とだけある。
+  > 夕暮れ、街道の先に城壁の町が見えてくる。門の脇では衛兵が松明に火を入れている。
+  > 川には石橋、丘の上には塔のある館。広場の方から、店じまいの声と鐘の音が聞こえる。
+
+- 一手目から、GMの応答ごとに d20 + 緊張度 で抽選し、平穏／小イベント／大イベントを決める。出目はGMではなく `tools/draw.py` か、プレイヤーが渡す乱数列から来る（[engine/event_draw.md](engine/event_draw.md)）。
 
 - 季節ごとに、外部アクターが新しい伏せた事実を0〜2件加える。0件の季節もある（[engine/season_inject.md](engine/season_inject.md)）。
 
@@ -654,6 +659,7 @@ cp -r campaigns/_template campaigns/myworld
 ```bash
 python3 tools/export_gate.py myworld            # 監査して、合格なら saves を更新し CHANGELOG.md に追記
 python3 tools/export_gate.py myworld --dry-run  # 監査のみ。書き込まない
+python3 tools/draw.py myworld                   # イベント抽選。d20を振り CHANGELOG.md に DRAW 行を追記
 ```
 
 `campaigns/` に実キャンペーンが1つだけなら、名前は省略できる。
