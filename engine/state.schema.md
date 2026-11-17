@@ -109,7 +109,10 @@ player:
 quests:                     # 進行（段階・状態は点値）
   - { id: <string>, stage: <int>, status: active|done|failed }
 
-# npcs: [...]               # 【オプション】{ id, disposition, alive, location }
+# npcs: [...]               # 【オプション】{ id, regard, cares, area, spot, alive }  → reaction.md §1
+#   regard: -3〜+3 / cares: [金,敬意,体面,秩序,安全,家族,信仰,自由] から1〜3個
+# rumors: [...]             # 【オプション】{ id, origin_move, tag, about, area, spot, witnesses,
+#                           #   reach, distorted, frozen, heard_by }  → reaction.md §2
 ```
 
 ---

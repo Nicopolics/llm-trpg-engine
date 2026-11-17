@@ -6,19 +6,24 @@
                                         [--from N] [--to N] [--text 文字列]
 条件は AND。該当する手のエントリをそのまま表示する。
 
-export_gate.py からは parse() と check() を import して検査 L/M/N/O に使う。
+export_gate.py からは parse() と check() を import して検査 L〜R に使う。
 """
 import os
 import re
 import sys
 
-KEYS = ["入力", "抽選", "事件", "起きたこと", "反応", "目撃", "台帳", "開示"]
+KEYS = ["入力", "行為", "判定", "抽選", "事件", "起きたこと", "反応", "目撃", "噂", "新設定", "台帳", "開示"]
 HEADER = re.compile(r"^### move (\d+)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*$")
 FIELD = re.compile(r"^- ([^:：]+)[:：]\s*(.*)$")
-REF = re.compile(r"\b(npc|fact|ev):([A-Za-z0-9_]+)")
+REF = re.compile(r"\b(npc|fact|ev|rumor):([A-Za-z0-9_]+)")
 TIER = re.compile(r"^(calm|small|major)\b")
 DRAW_LINE = re.compile(r"^DRAW\s+move=(\d+)\b.*?\btier=(calm|small|major)\b", re.MULTILINE)
 EVENT_LINE = re.compile(r"^EVENT\s+move=(\d+)\s+id=([A-Za-z0-9_]+)", re.MULTILINE)
+CANON_LINE = re.compile(r"^CANON\+\s+move=(\d+)\s+file=(\S+)", re.MULTILINE)
+REGARD_LINE = re.compile(r"^ROLL\s+move=\d+\s+kind=(?:regard|hear)\s+npc=([A-Za-z0-9_]+)\b.*?\bafter=(-?\d+)", re.MULTILINE)
+SPREAD_LINE = re.compile(r"^ROLL\s+move=\d+\s+kind=spread\s+rumor=([A-Za-z0-9_]+)\b.*?\breach=\d+→(\d+)", re.MULTILINE)
+ACT_TAG = re.compile(r"(助ける|与える|果たす|敬う|寄進する|中立|無視する|茶化す|侮る|破る|欺く|奪う|脅す|害する)")
+EMPTY = {"—", "-", "なし", ""}
 
 
 def parse(text):
@@ -47,7 +52,7 @@ def parse(text):
         if f:
             cur["fields"][f.group(1).strip()] = f.group(2).strip()
     for e in entries:
-        refs = {"npc": set(), "fact": set(), "ev": set()}
+        refs = {"npc": set(), "fact": set(), "ev": set(), "rumor": set()}
         for kind, rid in REF.findall("\n".join(e["raw"])):
             refs[kind].add(rid)
         e["refs"] = refs
@@ -111,6 +116,55 @@ def check(campaign_dir, state, fact_ids):
             elif events.get(n) not in ev_ids:
                 out.append(("M-event", f"move {n}: CHANGELOG の EVENT move={n} が無いか id が食い違う"))
 
+    # P: 新設定 ⇔ CANON+ 行
+    canon = {}
+    for m, path_ in CANON_LINE.findall(cl):
+        canon.setdefault(int(m), []).append(path_)
+    for e in entries:
+        n = e["move"]
+        has_new = e["fields"].get("新設定", "—").strip() not in EMPTY
+        if has_new and n not in canon:
+            out.append(("P-canon", f"move {n}: 新設定 があるのに CHANGELOG に CANON+ move={n} が無い"))
+        if not has_new and n in canon:
+            out.append(("P-canon", f"move {n}: CHANGELOG に CANON+ move={n} があるのに 新設定 が「—」"))
+    for n, paths in canon.items():
+        for rel in paths:
+            if not os.path.exists(os.path.join(campaign_dir, rel)):
+                out.append(("P-canon", f"CANON+ move={n}: file={rel} が存在しない"))
+
+    # Q: 好感照合（regard は最後の ROLL regard/hear の after と一致）
+    npcs = {x.get("id"): x for x in ((state or {}).get("npcs") or []) if isinstance(x, dict)}
+    last_after = {}
+    for nid, after in REGARD_LINE.findall(cl):
+        last_after[nid] = int(after)
+    for nid, npc in npcs.items():
+        rg = npc.get("regard")
+        if rg is None:
+            continue
+        if not isinstance(rg, int) or not -3 <= rg <= 3:
+            out.append(("Q-regard", f"npc:{nid}: regard={rg} が −3〜+3 の整数でない"))
+        elif nid in last_after and last_after[nid] != rg:
+            out.append(("Q-regard", f"npc:{nid}: regard={rg} だが最後の ROLL の after={last_after[nid]}"))
+
+    # R: 噂の発生と伝播
+    rumors = {r.get("id"): r for r in ((state or {}).get("rumors") or []) if isinstance(r, dict)}
+    by_origin = {}
+    for rid, r in rumors.items():
+        by_origin.setdefault(r.get("origin_move"), []).append(rid)
+    for e in entries:
+        if "行為" not in e["fields"]:
+            continue
+        tags = ACT_TAG.findall(e["fields"].get("行為", ""))
+        witnessed = e["fields"].get("目撃", "—").strip() not in EMPTY
+        if witnessed and any(t != "中立" for t in tags) and e["move"] not in by_origin:
+            out.append(("R-rumor", f"move {e['move']}: 目撃された中立以外の行為があるのに origin_move={e['move']} の噂が無い"))
+    last_reach = {}
+    for rid, reach in SPREAD_LINE.findall(cl):
+        last_reach[rid] = int(reach)
+    for rid, r in rumors.items():
+        if rid in last_reach and r.get("reach") != last_reach[rid]:
+            out.append(("R-rumor", f"rumor:{rid}: reach={r.get('reach')} だが最後の spread の結果は {last_reach[rid]}"))
+
     # N: 参照実在
     npc_ids = {x.get("id") for x in ((state or {}).get("npcs") or []) if isinstance(x, dict)}
     ev_ids = _event_ids(campaign_dir)
@@ -121,6 +175,8 @@ def check(campaign_dir, state, fact_ids):
             out.append(("N-ref", f"move {e['move']}: fact:{rid} が facts/ に無い"))
         for rid in sorted(e["refs"]["ev"] - ev_ids):
             out.append(("N-ref", f"move {e['move']}: ev:{rid} が world/04_events.md に無い"))
+        for rid in sorted(e["refs"]["rumor"] - set(rumors)):
+            out.append(("N-ref", f"move {e['move']}: rumor:{rid} が state.yaml の rumors に無い"))
     return out
 
 

@@ -27,7 +27,10 @@ export_gate.py — 三層開示エンジンの保存前ゲート
   L. 手番連続           — move が 1 から連続し、最後が meta.move と一致するか
   M. 抽選照合           — 抽選した手に CHANGELOG の DRAW/EVENT 行が対応するか
   N. 参照実在           — npc:/fact:/ev: の id が state/facts/事件プールに実在するか
-  O. キー欠落           — 8 つのキーがすべて書かれているか
+  O. キー欠落           — 12 のキーがすべて書かれているか
+  P. 新設定             — TURNLOG の新設定と CHANGELOG の CANON+ 行が対応し、file が実在するか
+  Q. 好感照合           — NPC の regard が最後の ROLL(regard/hear) の after と一致するか
+  R. 噂                 — 目撃された中立以外の行為に噂が発生し、reach が spread の結果と一致するか
 
 合格時: saves/last_revealed.json を更新し、CHANGELOG.md に [gate passed] を追記。
 不合格時: 非ゼロ終了。スナップショットは更新しない。

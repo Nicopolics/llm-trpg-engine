@@ -29,18 +29,22 @@ NPC の態度の変化や目撃は、数手後には忘れられ、同じ NPC �
 ```
 ### move <n> | <clock> | <場所>
 - 入力: <player の入力。原文のまま>
+- 行為: <行為タグ>→npc:<id> ; ...    ／ 誰にも向かない行動は「中立」（→ reaction.md §1.2）
+- 判定: 自動 ／ <難易度> d20=<r> mod=<m> → 成功|失敗（→ reaction.md §3）
 - 抽選: <calm|small|major> d20=<r> tension=<before>→<after>    ／ 抽選しない手は「なし（理由）」
 - 事件: ev:<event_id>    ／ 無ければ「—」
 - 起きたこと: <1〜3 文の要約。人物は npc:<id> で参照してよい>
-- 反応: npc:<id> <前>→<後>（理由） ; npc:<id> 変化なし ...    ／ 無ければ「—」
+- 反応: npc:<id> <タグ>×<cares> d6=<r> <前>→<後> ; npc:<id> 変化なし ...    ／ 無ければ「—」
 - 目撃: npc:<id>, <名前の無い者は文章で>    ／ 無ければ「—」
+- 噂: rumor:<id>（発生）; rumor:<id> reach <x>→<y>（伝播）    ／ 無ければ「—」
+- 新設定: <file>: <要約> ; ...    ／ 無ければ「—」（→ reaction.md §4）
 - 台帳: <その手で動いた state のキー>    ／ 無ければ「—」
 - 開示: <REVEAL/DISINFO/CORRECT fact:<id> ...>    ／ 無ければ「—」
 ```
 
-- 8 つのキーはすべて毎回書く（空なら「—」）。キーの抜けは検索・照合の穴になる。
-- 参照の書式は `npc:<id>`・`fact:<id>`・`ev:<id>` の 3 種。id は state.yaml の npcs、
-  facts/ のファイル名、world/04_events.md の事件 id と一致させる。
+- 12 のキーはすべて毎回書く（空なら「—」）。キーの抜けは検索・照合の穴になる。
+- 参照の書式は `npc:<id>`・`fact:<id>`・`ev:<id>`・`rumor:<id>` の 4 種。id は state.yaml の npcs、
+  facts/ のファイル名、world/04_events.md の事件 id、state.yaml の rumors と一致させる。
 - 「起きたこと」と「反応」に Canon を書かない。fact に関わる手は `fact:<id>` で参照するだけにする。
 - OOC の相談・セーブ・監査は手に数えない（`event_draw.md` §1 と同じ数え方）。
 
@@ -65,7 +69,9 @@ python3 tools/turnlog.py <campaign> --text 帳簿          # 文字列検索
 | L | 手番連続 | move が 1 から連続していない／最後の move が `meta.move` と一致しない |
 | M | 抽選照合 | 抽選した手に対応する `DRAW move=<n>` が CHANGELOG に無い／tier が食い違う。事件のある手に `EVENT move=<n> id=<id>` が無い |
 | N | 参照実在 | `npc:`・`fact:`・`ev:` の id が state.yaml・facts/・04_events.md に存在しない |
-| O | キー欠落 | 8 つのキーのどれかが無い |
+| O | キー欠落 | 12 のキーのどれかが無い |
+
+P（新設定）・Q（好感照合）・R（噂）は `reaction.md` §6。
 
 ## 5. コード無し版
 
