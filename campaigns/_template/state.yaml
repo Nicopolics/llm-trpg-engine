@@ -36,4 +36,6 @@ player:
 quests: []
   # - { id: "", stage: 0, status: active }
 
-# npcs: []                  # 【オプション】{ id, disposition, alive, location }
+# npcs: []                  # 【オプション】{ id, regard: 0, cares: [敬意], area: "", spot: "", alive: true }
+#                           #   regard −3〜+3 は roll.py の出目でしか動かさない（engine/reaction.md）
+# rumors: []                # 【オプション】目撃された中立以外の行為ごとに自動で発生（engine/reaction.md §2）
