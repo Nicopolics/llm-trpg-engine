@@ -3,10 +3,11 @@
 
 検索:
     python3 tools/turnlog.py <campaign> [--npc ID] [--fact ID] [--event ID]
-                                        [--from N] [--to N] [--text 文字列]
-条件は AND。該当する手のエントリをそのまま表示する。
+                                        [--from N] [--to N] [--text 文字列] [--raw]
+条件は AND。該当する手のエントリをそのまま表示する。--text は TRANSCRIPT.md の原文も探し、
+--raw を付けると該当手の原文（入力と本文）も表示する。
 
-export_gate.py からは parse() と check() を import して検査 L〜R に使う。
+export_gate.py からは parse() と check() を import して検査 L〜S に使う。
 """
 import os
 import re
@@ -58,6 +59,19 @@ def parse(text):
         e["refs"] = refs
         e["raw"] = "\n".join(e["raw"]).rstrip()
     return entries
+
+
+TS_HEADER = re.compile(r"^## move (\d+)\b.*$", re.MULTILINE)
+
+
+def parse_transcript(text):
+    """{move: 原文ブロック} を返す（TRANSCRIPT.md, engine/transcript.spec.md）。"""
+    out = {}
+    heads = list(TS_HEADER.finditer(text))
+    for i, m in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        out.setdefault(int(m.group(1)), []).append(text[m.start():end].rstrip())
+    return out
 
 
 def _event_ids(campaign_dir):
@@ -165,6 +179,22 @@ def check(campaign_dir, state, fact_ids):
         if rid in last_reach and r.get("reach") != last_reach[rid]:
             out.append(("R-rumor", f"rumor:{rid}: reach={r.get('reach')} だが最後の spread の結果は {last_reach[rid]}"))
 
+    # S: 生ログ対応（TRANSCRIPT.md があるとき）
+    ts_path = os.path.join(campaign_dir, "TRANSCRIPT.md")
+    if os.path.exists(ts_path):
+        with open(ts_path, encoding="utf-8") as f:
+            ts = parse_transcript(f.read())
+        tl_moves = {e["move"] for e in entries}
+        for n in sorted(tl_moves - set(ts)):
+            out.append(("S-transcript", f"move {n}: TURNLOG にあるが TRANSCRIPT に無い"))
+        for n in sorted(set(ts) - tl_moves):
+            out.append(("S-transcript", f"move {n}: TRANSCRIPT にあるが TURNLOG に無い"))
+        for n, blocks in ts.items():
+            if len(blocks) > 1:
+                out.append(("S-transcript", f"move {n}: TRANSCRIPT に重複"))
+            if "\n### 入力" not in blocks[0] or "\n### 本文" not in blocks[0]:
+                out.append(("S-transcript", f"move {n}: 入力 か 本文 の節が無い"))
+
     # N: 参照実在
     npc_ids = {x.get("id") for x in ((state or {}).get("npcs") or []) if isinstance(x, dict)}
     ev_ids = _event_ids(campaign_dir)
@@ -195,18 +225,28 @@ def main():
 
     with open(path, encoding="utf-8") as f:
         entries = parse(f.read())
+    ts_path = os.path.join(os.path.dirname(path), "TRANSCRIPT.md")
+    ts = {}
+    if os.path.exists(ts_path):
+        with open(ts_path, encoding="utf-8") as f:
+            ts = parse_transcript(f.read())
+    raw_wanted = "--raw" in args
     npc, fact, ev, text = opt("--npc"), opt("--fact"), opt("--event"), opt("--text")
     lo, hi = opt("--from"), opt("--to")
     hits = [e for e in entries
             if (npc is None or npc in e["refs"]["npc"])
             and (fact is None or fact in e["refs"]["fact"])
             and (ev is None or ev in e["refs"]["ev"])
-            and (text is None or text in e["raw"])
+            and (text is None or text in e["raw"] or any(text in b for b in ts.get(e["move"], [])))
             and (lo is None or e["move"] >= int(lo))
             and (hi is None or e["move"] <= int(hi))]
     for e in hits:
         print(e["raw"])
         print()
+        if raw_wanted:
+            for b in ts.get(e["move"], ["（TRANSCRIPT にこの手の原文は無い）"]):
+                print(b)
+                print()
     print(f"-- {len(hits)} / {len(entries)} 手", file=sys.stderr)
     return 0
 
